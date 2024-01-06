@@ -1,0 +1,594 @@
+---
+title: "Maplewood"
+runtime: shiny
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+    theme:
+      version: 4
+      bootswatch: minty
+      base_font: 
+        google: Prompt
+      heading_font:
+        google: Sen
+      code_font:
+        google: 
+          # arguments to sass::font_google() 
+          family: JetBrains Mono
+          local: false
+  
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(highcharter) 
+library(billboarder)
+library(gt)
+library(htmltools)
+library(viridis)
+library(xfun)
+library(shiny)
+library(RColorBrewer)
+```
+
+```{r}
+pums <- read_csv("pums_recs_matched_v1.csv")
+
+```
+
+Building Characteristics
+======================================================================
+Column {.sidebar data-width=250}
+----------------------------------------------------------------------
+```{r}
+sliderInput("income", "Annual Gross Household Income", min = 0, max = 500000, value = c(0,500000))
+
+pums_filter_on_income <- reactive({pums %>%
+  filter(FINCP >= input$income[1] & FINCP <= input$income[2])}) 
+
+pums_min_income <- reactive({
+  min(pums_filter_on_income()$FINCP)
+})
+
+pums_max_income <- reactive({
+  max(pums_filter_on_income()$FINCP)
+})
+#renderPrint(pums_min_income())
+#renderPrint(pums_max_income())
+```
+
+Column {.tabset .tabset-fade data-width=750}
+-----------------------------------------------------------------------
+### Heating Equipment
+```{r}
+pums$EQUIPM<- factor(pums$EQUIPM,
+                 levels = c(2,3,4,5,6,7,8,9,10,21,-2),
+                 labels = c("Steam/hot water system with radiators or pipes", "Central furnace", "Heat pump", "Built-in electric units installed in walls, ceilings, baseboards, or floors", "Built-in floor/wall pipeless furnace", "Built-in room heater burning gas, oil, or kerosene", "Wood-burning stove (cordwood or pellets)", "Fireplace", "Portable electric heaters", "Some other equipment", NA))
+
+pums$EQUIPAGE<- factor(pums$EQUIPAGE,
+                 levels = c(1,2,3,41,42,5,-2),
+                 labels = c("Less than 2 years old", "2 to 4 years old", "5 to 9 years old", "10 to 14 years old", "15 to 19 years old", "20 years or older", NA))
+
+
+#table(pums$AGECENAC)
+#table(pums$COOLTYPE)
+
+heat_equip_reactive = reactive({
+  pums %>%
+    filter(EQUIPM %in% c("Steam/hot water system with radiators or pipes", "Central furnace", "Heat pump"),
+           EQUIPAGE %in% c("Less than 2 years old", "2 to 4 years old", "5 to 9 years old", "10 to 14 years old", "15 to 19 years old", "20 years or older"),
+           (FINCP >= pums_min_income() & FINCP <= pums_max_income())) %>%
+  group_by(EQUIPAGE, EQUIPM) %>%
+  summarise(CNT = n())})
+
+#View(y)
+
+#renderPrint(y_reactive())
+```
+
+```{r}
+renderHighchart(hchart(heat_equip_reactive(), type = 'column', hcaes(x = EQUIPAGE, y = CNT, group = EQUIPM)) |>
+    hc_xAxis(
+     title = list(text = "Age of Heating Equipment")
+    ) |>
+   hc_yAxis(
+    title = list(text = " ")
+    ) |>
+   hc_title(
+    style = list(color = hex_to_rgba("black", 0.5)),
+    text = "Main Space Heating Equipment Type"
+    )
+)
+
+
+
+```
+### Cooling Equipment
+```{r}
+pums$COOLTYPE<- factor(pums$COOLTYPE,
+                 levels = c(1,2,3,-2),
+                 labels = c("Central air conditioning system", "Individual window wall or portable units", "Both a central system and individual units", NA))
+
+pums$AGECENAC<- factor(pums$AGECENAC,
+                 levels = c(1,2,3,41,42,5,-2),
+                 labels = c("Less than 2 years old", "2 to 4 years old", "5 to 9 years old", "10 to 14 years old", "15 to 19 years old", "20 years or older", NA))
+
+#table(pums$AGECENAC)
+#table(pums$COOLTYPE)
+cool_equip_reactive = reactive({pums %>%
+  filter(COOLTYPE %in% c("Central air conditioning system", "Individual window wall or portable units", "Both a central system and individual units"), AGECENAC %in% c("Less than 2 years old", "2 to 4 years old", "5 to 9 years old", "10 to 14 years old", "15 to 19 years old", "20 years or older"),
+         (FINCP >= pums_min_income() & FINCP <= pums_max_income())) %>%
+  group_by(AGECENAC, COOLTYPE) %>%
+  summarise(CNT = n())})
+
+```
+
+```{r}
+
+#Create highchart
+renderHighchart(hchart(cool_equip_reactive(), type = 'column', hcaes(x = AGECENAC, y = CNT, group = COOLTYPE)) |>
+   hc_chart(
+    #backgroundColor = "black"
+    backgroundColor = hex_to_rgba("lightgrey", 0.5)
+    ) |>
+   hc_xAxis(
+    title = list(text = "Age of Cooling Equipment")
+    ) |>
+   hc_yAxis(
+    title = list(text = " ")
+    ) |>
+   hc_title(
+    style = list(color = hex_to_rgba("black", 0.5)),
+    text = "Type of Air Conditioning Equipment Used"
+    )
+)
+
+```
+
+### Other Equipment
+```{r}
+
+pums_other_equip <- pums %>%
+  select(AGEDW, AGECWASH, AGERFRI1, AGEFRZR, AGECDRYER,FINCP)
+#glimpse(pums_other_equip)
+
+pums_other_equip_long <- pums_other_equip %>%
+  pivot_longer(cols = c("AGEDW", "AGECWASH", "AGERFRI1", "AGEFRZR", "AGECDRYER"),
+               names_to = "Other_Equipment",
+               values_to = "Other_Equipment_Age")
+
+
+pums_other_equip_long$Other_Equipment_Age <- factor(pums_other_equip_long$Other_Equipment_Age,
+                                                    levels = c(1,2,3,41,42,5,-2),
+                 labels = c("Less than 2 years old", "2 to 4 years old", "5 to 9 years old", "10 to 14 years old", "15 to 19 years old", "20 years or older", NA))
+
+
+
+pums_other_equip_long$Other_Equipment <- factor(pums_other_equip_long$Other_Equipment,
+                                                levels = c("AGEDW", "AGECWASH", "AGERFRI1", "AGEFRZR", "AGECDRYER"),
+                                                labels = c("Dishwasher", "Clothes Washer", "Refrigerator", "Freezer", "Dryer"))
+#View(pums_other_equip_long)
+
+
+other_equip_reactive = reactive({ pums_other_equip_long %>%
+  filter(Other_Equipment %in% c("Dishwasher", "Clothes Washer", "Refrigerator", "Freezer", "Dryer"), Other_Equipment_Age %in% c("Less than 2 years old", "2 to 4 years old", "5 to 9 years old", "10 to 14 years old", "15 to 19 years old", "20 years or older"),
+         (FINCP >= pums_min_income() & FINCP <= pums_max_income())) %>%
+  group_by(Other_Equipment_Age, Other_Equipment) %>%
+  summarise(CNT = n())
+})
+#View(y)
+```
+
+
+```{r}
+renderHighchart(hchart(other_equip_reactive(), type = 'column', hcaes(x = Other_Equipment_Age, y = CNT, group = Other_Equipment)) |>
+   hc_xAxis(
+    title = list(text = "Age of Other Equipment")
+    ) |>
+   hc_yAxis(
+    title = list(text = " ")
+    ) |>
+   hc_title(
+    style = list(color = hex_to_rgba("black", 0.5)),
+    text = "Other Equipment Type"
+    )
+)
+
+```
+
+### Lightbulbs
+
+```{r}
+
+pums$LGTINNUM <- factor(pums$LGTINNUM,
+                        levels = c(1,2,3,4,5),
+                        labels = c("Fewer than 20 light bulbs", "20 to 39 light bulbs", "40 to 59 light bulbs", "60 to 79 light bulbs", "80 or more light bulbs"))
+#View(pums)
+```
+
+
+```{r}
+lightbulbs_reactive = reactive({ pums %>%
+  filter(LGTINNUM %in% c("Fewer than 20 light bulbs", "20 to 39 light bulbs", "40 to 59 light bulbs", "60 to 79 light bulbs", "80 or more light bulbs"),
+         (FINCP >= pums_min_income() & FINCP <= pums_max_income())) %>%
+  group_by(LGTINNUM) %>%
+  summarise(CNT = n())
+})
+#table(y)
+
+```
+
+```{r}
+
+bulbs_inside <-renderHighchart(hchart(lightbulbs_reactive(), "pie", hcaes(x = LGTINNUM, y = CNT)) %>%
+  hc_title(text = "Number of light bulbs installed inside the home") %>%
+  #hc_add_theme(hc_theme_ggplot2())
+#hc_add_theme(hc_theme_google())
+  #hc_add_theme(hc_theme_bloom())
+  hc_add_theme(hc_theme_ffx()))
+```
+ 
+
+```{r}
+
+pums$LGTOUTNUM <- factor(pums$LGTOUTNUM,
+                        levels = c(0,1,2,3,-2),
+                        labels = c("None", "1 to 4 bulbs", "5 to 9 bulbs", "10 or more bulbs", NA))
+
+```
+
+```{r}
+lightbulbs_reactive_outside = reactive({ pums %>%
+  filter(LGTOUTNUM %in% c("None", "1 to 4 bulbs", "5 to 9 bulbs", "10 or more bulbs"),
+         (FINCP >= pums_min_income() & FINCP <= pums_max_income())) %>%
+  group_by(LGTOUTNUM) %>%
+  summarise(CNT = n())
+  
+})
+#table(y)
+
+```
+
+```{r}
+
+bulbs_outside <-renderHighchart(hchart(lightbulbs_reactive_outside(), "pie", hcaes(x = LGTOUTNUM, y = CNT)) %>%
+  hc_title(text = "Number of light bulbs installed outside the home") %>%
+  #hc_add_theme(hc_theme_ggplot2())
+#hc_add_theme(hc_theme_google())
+  #hc_add_theme(hc_theme_bloom())
+  hc_add_theme(hc_theme_ffx()))
+```
+
+```{r}
+splitLayout(cellWidths = c("50%"), bulbs_inside, bulbs_outside)
+``` 
+
+
+Energy Consumption Baseline
+======================================================================
+Column {.sidebar data-width=250}
+----------------------------------------------------------------------
+```{r}
+sliderInput("hhincome", "Annual Gross Household Income", min = 0, max = 500000, value = c(0,500000))
+
+pums_filter_on_hhincome <- reactive({pums %>%
+  filter(FINCP >= input$hhincome[1] & FINCP <= input$hhincome[2])}) 
+
+pums_min_hhincome <- reactive({
+  min(pums_filter_on_hhincome()$FINCP)
+})
+
+pums_max_hhincome <- reactive({
+  max(pums_filter_on_hhincome()$FINCP)
+})
+#renderPrint(pums_min_hhincome())
+#renderPrint(pums_max_hhincome())
+```
+
+Column {.tabset .tabset-fade data-width=750}
+-----------------------------------------------------------------------
+
+### Main Space Heating
+
+```{r}
+pums$FUELHEAT <- factor(pums$FUELHEAT,
+                        levels = c(1,2,3,5,7,21,-2),
+                        labels = c("Natural gas", "Propane", "Fuel oil/kerosene", "Electricity", "Wood", "Some other fuel", NA))
+#table(pums$FUELHEAT)
+```
+
+```{r}
+main_space_fuel <- reactive({pums %>%
+  filter(FUELHEAT %in% c("Natural gas", "Propane", "Fuel oil/kerosene", "Electricity", "Wood", "Some other fuel"),
+         (FINCP >= pums_min_hhincome() & FINCP <= pums_max_hhincome())) %>%
+  group_by(FUELHEAT) %>%
+  summarise(CNT = n())
+})
+#table(y)
+
+```
+
+```{r}
+cols <- viridis(8)
+#custom_colors <- viridis::mako(n = 15)
+renderHighchart(hchart(main_space_fuel(), "pie", hcaes(x = FUELHEAT, y = CNT)) %>%
+                  hc_title(text = "Main space Heating Fuel") %>%
+                  hc_colors(cols) %>%
+                  #hc_add_theme(hc_theme_ggplot2())
+                  #hc_add_theme(hc_theme_google())
+                  #hc_add_theme(hc_theme_bloom())
+                  hc_add_theme(hc_theme_ffx()))
+```
+
+### Main Water Heater
+```{r}
+pums$FUELH2O <- factor(pums$FUELH2O,
+                       levels = c(1,2,3,5,7,8,21),
+                       labels = c("Natural gas", "Propane", "Fuel oil/kerosene", "Electricity", "Wood", "Solar", "Some other fuel"))
+```
+
+
+```{r}
+cols <- viridis(8)
+#cols <- substr(cols, 0, 10)
+main_water_heater_fuel <- reactive({pums %>%
+   filter(FUELH2O %in% c("Natural gas", "Propane", "Fuel oil/kerosene", "Electricity", "Wood", "Solar", "Some other fuel"),
+         (FINCP >= pums_min_hhincome() & FINCP <= pums_max_hhincome())) %>%
+   group_by(FUELH2O) %>%
+   summarise(CNT = n())
+})
+#table(y)
+ 
+renderHighchart(hchart(main_water_heater_fuel(), "pie", hcaes(x = FUELH2O, y = CNT)) %>%
+  hc_title(text = "Fuel Used by Main Water Heater") %>%
+hc_add_theme(hc_theme_ffx()))
+
+```
+
+### Stove
+```{r}
+pums$STOVENFUEL <- factor(pums$STOVENFUEL,
+                       levels = c(1,2,5,13,21,-2),
+                       labels = c("Natural gas", "Propane", "Electricity", "Dual fuel", "Some other fuel", NA))
+```
+
+```{r}
+cols <- viridis(8)
+#cols <- substr(cols, 0, 10)
+stove_fuel <- reactive({pums %>%
+   filter(STOVENFUEL %in% c("Natural gas", "Propane", "Electricity", "Dual fuel", "Some other fuel"),
+         (FINCP >= pums_min_hhincome() & FINCP <= pums_max_hhincome())) %>%
+   group_by(STOVENFUEL) %>%
+   summarise(CNT = n())
+})
+ 
+renderHighchart(hchart(stove_fuel(), "pie", hcaes(x = STOVENFUEL, y = CNT)) %>%
+  hc_title(text = "Fuel used by stove") %>%
+hc_add_theme(hc_theme_ffx()))
+```
+
+### Clothes Dryer
+```{r}
+pums$DRYRFUEL <- factor(pums$DRYRFUEL,
+                       levels = c(1,2,5,-2),
+                       labels = c("Natural gas", "Propane", "Electricity", NA))
+```
+
+```{r}
+cols <- viridis(8)
+#cols <- substr(cols, 0, 10)
+dryer_fuel <- reactive({pums %>%
+   filter(DRYRFUEL %in% c("Natural gas", "Propane", "Electricity"),
+         (FINCP >= pums_min_hhincome() & FINCP <= pums_max_hhincome())) %>%
+   group_by(DRYRFUEL) %>%
+   summarise(CNT = n())
+})
+ 
+renderHighchart(hchart(dryer_fuel(), "pie", hcaes(x = DRYRFUEL, y = CNT)) %>%
+  hc_title(text = " Fuel used by clothes dryer") %>%
+hc_add_theme(hc_theme_ffx()))
+```
+
+Technology Adoption
+======================================================================
+Column {.sidebar data-width=250}
+----------------------------------------------------------------------
+```{r}
+sliderInput("hhaincome", "Annual Gross Household Income", min = 0, max = 500000, value = c(0,500000))
+
+pums_filter_on_hhaincome <- reactive({pums %>%
+  filter(FINCP >= input$hhaincome[1] & FINCP <= input$hhaincome[2])}) 
+
+pums_min_hhaincome <- reactive({
+  min(pums_filter_on_hhaincome()$FINCP)
+})
+
+pums_max_hhaincome <- reactive({
+  max(pums_filter_on_hhaincome()$FINCP)
+})
+renderPrint(pums_min_hhaincome())
+renderPrint(pums_max_hhaincome())
+```
+Column {data-width=200}
+----------------------------------------------------------------------
+### Using Solar
+```{r}
+pums_solar<-pums %>%
+    count(USESOLAR) %>%
+    # count creates a column called 'n'
+    mutate(percent = n / sum(n) * 100)
+
+valueBox(scales::percent((100 - pums_solar$percent)/100), icon = "fa-thumbs-down",col="orange")
+```
+
+Column {data-width=200}
+-----------------------------------------------------------------------
+### Smart Thermostat
+```{r}
+pums_SMARTTHERM<-pums %>%
+    count(SMARTTHERM) %>%
+    # count creates a column called 'n'
+    mutate(percent = n / sum(n) * 100)
+
+pums_SMARTTHERM_yes <- pums_SMARTTHERM %>%
+  filter(SMARTTHERM == 1)
+
+valueBox(scales::percent((pums_SMARTTHERM_yes$percent)/100), icon = "fa-line-chart",col="lightgreen")
+```
+
+Column {data-width=200}
+-----------------------------------------------------------------------
+### Electricity Smart Meter
+```{r}
+pums_SMARTMETER<-pums %>%
+    count(SMARTMETER) %>%
+    # count creates a column called 'n'
+    mutate(percent = n / sum(n) * 100)
+
+pums_SMARTMETER_yes <- pums_SMARTMETER %>%
+  filter(SMARTMETER == 1)
+
+valueBox(scales::percent((pums_SMARTMETER_yes$percent)/100), icon = "fa-line-chart",col = "lightblue")
+```
+
+Column {data-width=400}
+-----------------------------------------------------------------------
+### {.no-padding}
+```{r}
+#Outside light bulb motion detector
+y = pums %>%  
+  group_by(LGTOUTCNTL) %>% 
+  summarise(CNT = n())
+
+#Donut Chart
+billboarder() %>% 
+  bb_donutchart(y) %>% 
+  bb_legend(position = 'right') %>%
+  bb_data(names = list("1" = "Yes", "0" = "No", "-2" = "Not applicable"), labels = TRUE) %>%
+  bb_title("Outside light bulbs controlled by motion detectors or light sensors") %>%
+  bb_color(palette = RColorBrewer::brewer.pal(5,"Set2"))
+
+
+```
+
+### {.no-padding}
+```{r}
+#Portion of inside light bulbs that are LED
+y = pums %>%  
+  group_by(LGTINLED) %>% 
+  summarise(CNT = n())
+
+#Donut Chart
+billboarder() %>% 
+  bb_donutchart(y) %>% 
+  bb_legend(position = 'right') %>%
+  bb_data(names = list("1" = "All", "2" = "Most", "3" = "About half", "4" = "Some", "0" = "None"), labels = TRUE) %>%
+  bb_title("Portion of inside light bulbs that are LED") %>%
+  bb_color(palette = RColorBrewer::brewer.pal(5,"Set2"))
+
+```
+
+
+
+
+
+Demographic Information
+======================================================================
+
+Column {.tabset .tabset-fade data-width=650}
+-----------------------------------------------------------------------
+
+### Income
+
+```{r}
+
+pums$MONEYPY <- factor(pums$MONEYPY,
+                        levels = c(1,2,3,4,5,6,7,8),
+                        labels = c("< $20,000", "$20,000 - $39,999", "$40,000 - $59,999", "$60,000 - $79,999", "$80,000 - $99,999", "$100,000 - $119,999", "$120,000 - $139,999", ">= $140,000"))
+
+
+pums$HOUSEHOLDER_RACE <- factor(pums$HOUSEHOLDER_RACE,
+                                levels = c(1,2,3,4,5,6,7),
+                                labels = c("White", "Black or African/American", "American Indian or Alaska Native", "Asian", "Native Hawaiian or Other Pacific Islander", "Some Other Race", "2 or More Races"))
+
+y = pums %>%
+  filter(HOUSEHOLDER_RACE %in% c("White", "Black or African/American","Asian", "2 or More Races"), MONEYPY %in% c("< $20,000", "$20,000 - $39,999", "$40,000 - $59,999", "$60,000 - $79,999", "$80,000 - $99,999", "$100,000 - $119,999", "$120,000 - $139,999", ">= $140,000")) %>%
+  group_by(MONEYPY, HOUSEHOLDER_RACE) %>%
+  summarise(CNT = n())
+
+#table(y)
+
+#Create highchart
+hchart(y, type = 'column', hcaes(x = MONEYPY, y = CNT, group = HOUSEHOLDER_RACE)) |>
+   hc_xAxis(
+    title = list(text = "Income")
+    ) |>
+   hc_yAxis(
+    title = list(text = " ")
+    ) |>
+   hc_title(
+    style = list(color = hex_to_rgba("black", 0.5), fontSize = "25px", fontWeight = "bold"),
+    text = "Annual Gross Household Income by Race"
+    )
+
+```
+
+
+### Age
+
+```{r}
+
+# Colors
+custom_colors <- viridis::mako(n = 15)
+
+hchart(
+  pums$HHAGE, 
+  color = "#5D69B1", name = "Age"
+  )%>%
+  hc_add_theme(hc_theme_google()) %>%
+  hc_tooltip(pointFormat = "<b>Age: </b> {point.y} <b>")%>%
+  hc_title(text = "Distribution of Respondent's Age", 
+           style = list(color = hex_to_rgba("black", 0.5),fontSize = "25px", fontWeight = "bold")) %>%
+  hc_credits(enabled = TRUE)
+
+```
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### {.no-padding}
+
+```{r}
+cols <- viridis(8)
+#cols <- substr(cols, 0, 10)
+ y = pums %>%
+   filter(MONEYPY %in% c("< $20,000", "$20,000 - $39,999", "$40,000 - $59,999", "$60,000 - $79,999", "$80,000 - $99,999", "$100,000 - $119,999", "$120,000 - $139,999", ">= $140,000")) %>%
+   group_by(MONEYPY) %>%
+   summarise(CNT = n())
+
+hchart(y, "pie", hcaes(x = MONEYPY, y = CNT)) %>%
+   hc_title(text = "Annual Gross Household Income for the Last Year",
+            style = list(fontSize = "14px", fontWeight = "bold")) %>%
+  hc_add_theme(hc_theme_ffx()) %>%
+  hc_colors(cols)
+```
+
+### {.no-padding}
+```{r}
+cols <- viridis(4)
+
+y = pums %>%
+  filter(HOUSEHOLDER_RACE %in% c("White", "Black or African/American","Asian", "2 or More Races")) %>%
+  group_by(HOUSEHOLDER_RACE) %>%
+  summarise(CNT = n())
+
+hchart(y, "pie", hcaes(x = HOUSEHOLDER_RACE, y = CNT)) %>%
+   hc_title(text = "Householder Race",
+            style = list(fontSize = "14px", fontWeight = "bold")) %>%
+  hc_add_theme(hc_theme_ffx()) %>%
+  hc_colors(cols)
+
+```
+
+
