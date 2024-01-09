@@ -40,29 +40,28 @@ pums <- read_csv("pums_recs_matched_v1.csv")
 
 Building Characteristics
 ======================================================================
-Column {.sidebar data-width=250}
-----------------------------------------------------------------------
+
+Column {.tabset .tabset-fade}
+-----------------------------------------------------------------------
+
 ```{r}
-sliderInput("income", "Annual Gross Household Income", min = 0, max = 500000, value = c(0,500000))
+pums$MONEYPY <- factor(pums$MONEYPY,
+                        levels = c(1,2,3,4,5,6,7,8),
+                        labels = c("< $20,000", "$20,000 - $39,999", "$40,000 - $59,999", "$60,000 - $79,999", "$80,000 - $99,999", "$100,000 - $119,999", "$120,000 - $139,999", ">= $140,000"))
 
-pums_filter_on_income <- reactive({pums %>%
-  filter(FINCP >= input$income[1] & FINCP <= input$income[2])}) 
+income_group <- pums %>%
+  .$MONEYPY %>%
+  unique %>%
+  sort
+#income_group
 
-pums_min_income <- reactive({
-  min(pums_filter_on_income()$FINCP)
-})
-
-pums_max_income <- reactive({
-  max(pums_filter_on_income()$FINCP)
-})
-#renderPrint(pums_min_income())
-#renderPrint(pums_max_income())
+selectInput("Income1", "Income:",
+            choices = income_group,selected = "$60,000 - $79,999")
 ```
 
-Column {.tabset .tabset-fade data-width=750}
------------------------------------------------------------------------
 ### Heating Equipment
 ```{r}
+
 pums$EQUIPM<- factor(pums$EQUIPM,
                  levels = c(2,3,4,5,6,7,8,9,10,21,-2),
                  labels = c("Steam/hot water system with radiators or pipes", "Central furnace", "Heat pump", "Built-in electric units installed in walls, ceilings, baseboards, or floors", "Built-in floor/wall pipeless furnace", "Built-in room heater burning gas, oil, or kerosene", "Wood-burning stove (cordwood or pellets)", "Fireplace", "Portable electric heaters", "Some other equipment", NA))
@@ -79,7 +78,7 @@ heat_equip_reactive = reactive({
   pums %>%
     filter(EQUIPM %in% c("Steam/hot water system with radiators or pipes", "Central furnace", "Heat pump"),
            EQUIPAGE %in% c("Less than 2 years old", "2 to 4 years old", "5 to 9 years old", "10 to 14 years old", "15 to 19 years old", "20 years or older"),
-           (FINCP >= pums_min_income() & FINCP <= pums_max_income())) %>%
+           MONEYPY == input$Income1) %>%
   group_by(EQUIPAGE, EQUIPM) %>%
   summarise(CNT = n())})
 
@@ -115,11 +114,14 @@ pums$AGECENAC<- factor(pums$AGECENAC,
                  levels = c(1,2,3,41,42,5,-2),
                  labels = c("Less than 2 years old", "2 to 4 years old", "5 to 9 years old", "10 to 14 years old", "15 to 19 years old", "20 years or older", NA))
 
+
 #table(pums$AGECENAC)
 #table(pums$COOLTYPE)
 cool_equip_reactive = reactive({pums %>%
   filter(COOLTYPE %in% c("Central air conditioning system", "Individual window wall or portable units", "Both a central system and individual units"), AGECENAC %in% c("Less than 2 years old", "2 to 4 years old", "5 to 9 years old", "10 to 14 years old", "15 to 19 years old", "20 years or older"),
-         (FINCP >= pums_min_income() & FINCP <= pums_max_income())) %>%
+         #(FINCP >= pums_min_income() & FINCP <= pums_max_income())
+         MONEYPY == input$Income1
+         ) %>%
   group_by(AGECENAC, COOLTYPE) %>%
   summarise(CNT = n())})
 
@@ -151,13 +153,14 @@ renderHighchart(hchart(cool_equip_reactive(), type = 'column', hcaes(x = AGECENA
 ```{r}
 
 pums_other_equip <- pums %>%
-  select(AGEDW, AGECWASH, AGERFRI1, AGEFRZR, AGECDRYER,FINCP)
+  select(AGEDW, AGECWASH, AGERFRI1, AGEFRZR, AGECDRYER,MONEYPY)
 #glimpse(pums_other_equip)
 
 pums_other_equip_long <- pums_other_equip %>%
   pivot_longer(cols = c("AGEDW", "AGECWASH", "AGERFRI1", "AGEFRZR", "AGECDRYER"),
                names_to = "Other_Equipment",
                values_to = "Other_Equipment_Age")
+
 
 
 pums_other_equip_long$Other_Equipment_Age <- factor(pums_other_equip_long$Other_Equipment_Age,
@@ -174,7 +177,9 @@ pums_other_equip_long$Other_Equipment <- factor(pums_other_equip_long$Other_Equi
 
 other_equip_reactive = reactive({ pums_other_equip_long %>%
   filter(Other_Equipment %in% c("Dishwasher", "Clothes Washer", "Refrigerator", "Freezer", "Dryer"), Other_Equipment_Age %in% c("Less than 2 years old", "2 to 4 years old", "5 to 9 years old", "10 to 14 years old", "15 to 19 years old", "20 years or older"),
-         (FINCP >= pums_min_income() & FINCP <= pums_max_income())) %>%
+         #(FINCP >= pums_min_income() & FINCP <= pums_max_income())
+         MONEYPY == input$Income1
+         ) %>%
   group_by(Other_Equipment_Age, Other_Equipment) %>%
   summarise(CNT = n())
 })
@@ -205,14 +210,16 @@ renderHighchart(hchart(other_equip_reactive(), type = 'column', hcaes(x = Other_
 pums$LGTINNUM <- factor(pums$LGTINNUM,
                         levels = c(1,2,3,4,5),
                         labels = c("Fewer than 20 light bulbs", "20 to 39 light bulbs", "40 to 59 light bulbs", "60 to 79 light bulbs", "80 or more light bulbs"))
-#View(pums)
+
 ```
 
 
 ```{r}
 lightbulbs_reactive = reactive({ pums %>%
   filter(LGTINNUM %in% c("Fewer than 20 light bulbs", "20 to 39 light bulbs", "40 to 59 light bulbs", "60 to 79 light bulbs", "80 or more light bulbs"),
-         (FINCP >= pums_min_income() & FINCP <= pums_max_income())) %>%
+         #(FINCP >= pums_min_income() & FINCP <= pums_max_income())
+         MONEYPY == input$Income1
+         ) %>%
   group_by(LGTINNUM) %>%
   summarise(CNT = n())
 })
@@ -242,13 +249,13 @@ pums$LGTOUTNUM <- factor(pums$LGTOUTNUM,
 ```{r}
 lightbulbs_reactive_outside = reactive({ pums %>%
   filter(LGTOUTNUM %in% c("None", "1 to 4 bulbs", "5 to 9 bulbs", "10 or more bulbs"),
-         (FINCP >= pums_min_income() & FINCP <= pums_max_income())) %>%
+         #(FINCP >= pums_min_income() & FINCP <= pums_max_income())
+         MONEYPY == input$Income1
+         ) %>%
   group_by(LGTOUTNUM) %>%
   summarise(CNT = n())
   
 })
-#table(y)
-
 ```
 
 ```{r}
@@ -268,26 +275,8 @@ splitLayout(cellWidths = c("50%"), bulbs_inside, bulbs_outside)
 
 Energy Consumption Baseline
 ======================================================================
-Column {.sidebar data-width=250}
-----------------------------------------------------------------------
-```{r}
-sliderInput("hhincome", "Annual Gross Household Income", min = 0, max = 500000, value = c(0,500000))
 
-pums_filter_on_hhincome <- reactive({pums %>%
-  filter(FINCP >= input$hhincome[1] & FINCP <= input$hhincome[2])}) 
-
-pums_min_hhincome <- reactive({
-  min(pums_filter_on_hhincome()$FINCP)
-})
-
-pums_max_hhincome <- reactive({
-  max(pums_filter_on_hhincome()$FINCP)
-})
-#renderPrint(pums_min_hhincome())
-#renderPrint(pums_max_hhincome())
-```
-
-Column {.tabset .tabset-fade data-width=750}
+Column {.tabset .tabset-fade}
 -----------------------------------------------------------------------
 
 ### Main Space Heating
@@ -296,13 +285,18 @@ Column {.tabset .tabset-fade data-width=750}
 pums$FUELHEAT <- factor(pums$FUELHEAT,
                         levels = c(1,2,3,5,7,21,-2),
                         labels = c("Natural gas", "Propane", "Fuel oil/kerosene", "Electricity", "Wood", "Some other fuel", NA))
+
+selectInput("Income5", "Income:",
+            choices = income_group,selected = "$60,000 - $79,999")
 #table(pums$FUELHEAT)
 ```
 
 ```{r}
 main_space_fuel <- reactive({pums %>%
   filter(FUELHEAT %in% c("Natural gas", "Propane", "Fuel oil/kerosene", "Electricity", "Wood", "Some other fuel"),
-         (FINCP >= pums_min_hhincome() & FINCP <= pums_max_hhincome())) %>%
+         #(FINCP >= pums_min_hhincome() & FINCP <= pums_max_hhincome())
+         MONEYPY == input$Income5
+         ) %>%
   group_by(FUELHEAT) %>%
   summarise(CNT = n())
 })
@@ -327,6 +321,9 @@ renderHighchart(hchart(main_space_fuel(), "pie", hcaes(x = FUELHEAT, y = CNT)) %
 pums$FUELH2O <- factor(pums$FUELH2O,
                        levels = c(1,2,3,5,7,8,21),
                        labels = c("Natural gas", "Propane", "Fuel oil/kerosene", "Electricity", "Wood", "Solar", "Some other fuel"))
+
+selectInput("Income6", "Income:",
+            choices = income_group,selected = "$60,000 - $79,999")
 ```
 
 
@@ -335,7 +332,9 @@ cols <- viridis(8)
 #cols <- substr(cols, 0, 10)
 main_water_heater_fuel <- reactive({pums %>%
    filter(FUELH2O %in% c("Natural gas", "Propane", "Fuel oil/kerosene", "Electricity", "Wood", "Solar", "Some other fuel"),
-         (FINCP >= pums_min_hhincome() & FINCP <= pums_max_hhincome())) %>%
+         #(FINCP >= pums_min_hhincome() & FINCP <= pums_max_hhincome())
+         MONEYPY == input$Income6
+         ) %>%
    group_by(FUELH2O) %>%
    summarise(CNT = n())
 })
@@ -352,6 +351,9 @@ hc_add_theme(hc_theme_ffx()))
 pums$STOVENFUEL <- factor(pums$STOVENFUEL,
                        levels = c(1,2,5,13,21,-2),
                        labels = c("Natural gas", "Propane", "Electricity", "Dual fuel", "Some other fuel", NA))
+
+selectInput("Income7", "Income:",
+            choices = income_group,selected = "$60,000 - $79,999")
 ```
 
 ```{r}
@@ -359,7 +361,9 @@ cols <- viridis(8)
 #cols <- substr(cols, 0, 10)
 stove_fuel <- reactive({pums %>%
    filter(STOVENFUEL %in% c("Natural gas", "Propane", "Electricity", "Dual fuel", "Some other fuel"),
-         (FINCP >= pums_min_hhincome() & FINCP <= pums_max_hhincome())) %>%
+         #(FINCP >= pums_min_hhincome() & FINCP <= pums_max_hhincome())
+         MONEYPY == input$Income7
+         ) %>%
    group_by(STOVENFUEL) %>%
    summarise(CNT = n())
 })
@@ -374,6 +378,9 @@ hc_add_theme(hc_theme_ffx()))
 pums$DRYRFUEL <- factor(pums$DRYRFUEL,
                        levels = c(1,2,5,-2),
                        labels = c("Natural gas", "Propane", "Electricity", NA))
+
+selectInput("Income8", "Income:",
+            choices = income_group,selected = "$60,000 - $79,999")
 ```
 
 ```{r}
@@ -381,7 +388,9 @@ cols <- viridis(8)
 #cols <- substr(cols, 0, 10)
 dryer_fuel <- reactive({pums %>%
    filter(DRYRFUEL %in% c("Natural gas", "Propane", "Electricity"),
-         (FINCP >= pums_min_hhincome() & FINCP <= pums_max_hhincome())) %>%
+         #(FINCP >= pums_min_hhincome() & FINCP <= pums_max_hhincome())
+         MONEYPY == input$Income8
+         ) %>%
    group_by(DRYRFUEL) %>%
    summarise(CNT = n())
 })
@@ -393,24 +402,6 @@ hc_add_theme(hc_theme_ffx()))
 
 Technology Adoption
 ======================================================================
-Column {.sidebar data-width=250}
-----------------------------------------------------------------------
-```{r}
-sliderInput("hhaincome", "Annual Gross Household Income", min = 0, max = 500000, value = c(0,500000))
-
-pums_filter_on_hhaincome <- reactive({pums %>%
-  filter(FINCP >= input$hhaincome[1] & FINCP <= input$hhaincome[2])}) 
-
-pums_min_hhaincome <- reactive({
-  min(pums_filter_on_hhaincome()$FINCP)
-})
-
-pums_max_hhaincome <- reactive({
-  max(pums_filter_on_hhaincome()$FINCP)
-})
-renderPrint(pums_min_hhaincome())
-renderPrint(pums_max_hhaincome())
-```
 Column {data-width=200}
 ----------------------------------------------------------------------
 ### Using Solar
@@ -504,10 +495,6 @@ Column {.tabset .tabset-fade data-width=650}
 
 ```{r}
 
-pums$MONEYPY <- factor(pums$MONEYPY,
-                        levels = c(1,2,3,4,5,6,7,8),
-                        labels = c("< $20,000", "$20,000 - $39,999", "$40,000 - $59,999", "$60,000 - $79,999", "$80,000 - $99,999", "$100,000 - $119,999", "$120,000 - $139,999", ">= $140,000"))
-
 
 pums$HOUSEHOLDER_RACE <- factor(pums$HOUSEHOLDER_RACE,
                                 levels = c(1,2,3,4,5,6,7),
@@ -591,4 +578,9 @@ hchart(y, "pie", hcaes(x = HOUSEHOLDER_RACE, y = CNT)) %>%
 
 ```
 
+```{css my-style, echo = FALSE}
 
+.chart-wrapper .chart-stage {
+    overflow: auto;
+}
+```
