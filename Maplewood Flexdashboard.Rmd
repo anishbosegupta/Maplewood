@@ -37,11 +37,10 @@ library(RColorBrewer)
 pums <- read_csv("pums_recs_matched_v1.csv")
 
 ```
-
 Building Characteristics
 ======================================================================
 
-Column {.tabset .tabset-fade}
+Column {.tabset .tabset-fade data-width=500}
 -----------------------------------------------------------------------
 
 ```{r}
@@ -60,6 +59,7 @@ selectInput("Income1", "Income:",
 ```
 
 ### Heating Equipment
+
 ```{r}
 
 pums$EQUIPM<- factor(pums$EQUIPM,
@@ -104,7 +104,9 @@ renderHighchart(hchart(heat_equip_reactive(), type = 'column', hcaes(x = EQUIPAG
 
 
 ```
+
 ### Cooling Equipment
+
 ```{r}
 pums$COOLTYPE<- factor(pums$COOLTYPE,
                  levels = c(1,2,3,-2),
@@ -148,6 +150,9 @@ renderHighchart(hchart(cool_equip_reactive(), type = 'column', hcaes(x = AGECENA
 )
 
 ```
+
+Column {.tabset .tabset-fade data-width=500}
+-----------------------------------------------------------------------
 
 ### Other Equipment
 ```{r}
@@ -209,14 +214,14 @@ renderHighchart(hchart(other_equip_reactive(), type = 'column', hcaes(x = Other_
 
 pums$LGTINNUM <- factor(pums$LGTINNUM,
                         levels = c(1,2,3,4,5),
-                        labels = c("Fewer than 20 light bulbs", "20 to 39 light bulbs", "40 to 59 light bulbs", "60 to 79 light bulbs", "80 or more light bulbs"))
+                        labels = c("< 20 lightbulbs", "20 - 39 lightbulbs", "40 - 59 lightbulbs", "60 - 79 lightbulbs", ">80 lightbulbs"))
 
 ```
 
 
 ```{r}
 lightbulbs_reactive = reactive({ pums %>%
-  filter(LGTINNUM %in% c("Fewer than 20 light bulbs", "20 to 39 light bulbs", "40 to 59 light bulbs", "60 to 79 light bulbs", "80 or more light bulbs"),
+  filter(LGTINNUM %in% c("< 20 lightbulbs", "20 - 39 lightbulbs", "40 - 59 lightbulbs", "60 - 79 light bulbs", "> 80 lightbulbs"),
          #(FINCP >= pums_min_income() & FINCP <= pums_max_income())
          MONEYPY == input$Income1
          ) %>%
@@ -230,7 +235,7 @@ lightbulbs_reactive = reactive({ pums %>%
 ```{r}
 
 bulbs_inside <-renderHighchart(hchart(lightbulbs_reactive(), "pie", hcaes(x = LGTINNUM, y = CNT)) %>%
-  hc_title(text = "Number of light bulbs installed inside the home") %>%
+  hc_title(text = "Bulbs Inside the Home") %>%
   #hc_add_theme(hc_theme_ggplot2())
 #hc_add_theme(hc_theme_google())
   #hc_add_theme(hc_theme_bloom())
@@ -242,13 +247,13 @@ bulbs_inside <-renderHighchart(hchart(lightbulbs_reactive(), "pie", hcaes(x = LG
 
 pums$LGTOUTNUM <- factor(pums$LGTOUTNUM,
                         levels = c(0,1,2,3,-2),
-                        labels = c("None", "1 to 4 bulbs", "5 to 9 bulbs", "10 or more bulbs", NA))
+                        labels = c("None", "1 - 4 lightbulbs", "5 - 9 lightbulbs", "> 10 lightbulbs", NA))
 
 ```
 
 ```{r}
 lightbulbs_reactive_outside = reactive({ pums %>%
-  filter(LGTOUTNUM %in% c("None", "1 to 4 bulbs", "5 to 9 bulbs", "10 or more bulbs"),
+  filter(LGTOUTNUM %in% c("None", "1 - 4 lightbulbs", "5 - 9 lightbulbs", "> 10 lightbulbs"),
          #(FINCP >= pums_min_income() & FINCP <= pums_max_income())
          MONEYPY == input$Income1
          ) %>%
@@ -261,7 +266,7 @@ lightbulbs_reactive_outside = reactive({ pums %>%
 ```{r}
 
 bulbs_outside <-renderHighchart(hchart(lightbulbs_reactive_outside(), "pie", hcaes(x = LGTOUTNUM, y = CNT)) %>%
-  hc_title(text = "Number of light bulbs installed outside the home") %>%
+  hc_title(text = "Bulbs Outside the Home") %>%
   #hc_add_theme(hc_theme_ggplot2())
 #hc_add_theme(hc_theme_google())
   #hc_add_theme(hc_theme_bloom())
@@ -279,6 +284,11 @@ Energy Consumption Baseline
 Column {.tabset .tabset-fade}
 -----------------------------------------------------------------------
 
+```{r}
+selectInput("Income2", "Income:",
+            choices = income_group,selected = "$60,000 - $79,999")
+```
+
 ### Main Space Heating
 
 ```{r}
@@ -286,8 +296,7 @@ pums$FUELHEAT <- factor(pums$FUELHEAT,
                         levels = c(1,2,3,5,7,21,-2),
                         labels = c("Natural gas", "Propane", "Fuel oil/kerosene", "Electricity", "Wood", "Some other fuel", NA))
 
-selectInput("Income5", "Income:",
-            choices = income_group,selected = "$60,000 - $79,999")
+
 #table(pums$FUELHEAT)
 ```
 
@@ -295,7 +304,7 @@ selectInput("Income5", "Income:",
 main_space_fuel <- reactive({pums %>%
   filter(FUELHEAT %in% c("Natural gas", "Propane", "Fuel oil/kerosene", "Electricity", "Wood", "Some other fuel"),
          #(FINCP >= pums_min_hhincome() & FINCP <= pums_max_hhincome())
-         MONEYPY == input$Income5
+         MONEYPY == input$Income2
          ) %>%
   group_by(FUELHEAT) %>%
   summarise(CNT = n())
@@ -322,8 +331,7 @@ pums$FUELH2O <- factor(pums$FUELH2O,
                        levels = c(1,2,3,5,7,8,21),
                        labels = c("Natural gas", "Propane", "Fuel oil/kerosene", "Electricity", "Wood", "Solar", "Some other fuel"))
 
-selectInput("Income6", "Income:",
-            choices = income_group,selected = "$60,000 - $79,999")
+
 ```
 
 
@@ -333,7 +341,7 @@ cols <- viridis(8)
 main_water_heater_fuel <- reactive({pums %>%
    filter(FUELH2O %in% c("Natural gas", "Propane", "Fuel oil/kerosene", "Electricity", "Wood", "Solar", "Some other fuel"),
          #(FINCP >= pums_min_hhincome() & FINCP <= pums_max_hhincome())
-         MONEYPY == input$Income6
+         MONEYPY == input$Income2
          ) %>%
    group_by(FUELH2O) %>%
    summarise(CNT = n())
@@ -352,8 +360,7 @@ pums$STOVENFUEL <- factor(pums$STOVENFUEL,
                        levels = c(1,2,5,13,21,-2),
                        labels = c("Natural gas", "Propane", "Electricity", "Dual fuel", "Some other fuel", NA))
 
-selectInput("Income7", "Income:",
-            choices = income_group,selected = "$60,000 - $79,999")
+
 ```
 
 ```{r}
@@ -362,7 +369,7 @@ cols <- viridis(8)
 stove_fuel <- reactive({pums %>%
    filter(STOVENFUEL %in% c("Natural gas", "Propane", "Electricity", "Dual fuel", "Some other fuel"),
          #(FINCP >= pums_min_hhincome() & FINCP <= pums_max_hhincome())
-         MONEYPY == input$Income7
+         MONEYPY == input$Income2
          ) %>%
    group_by(STOVENFUEL) %>%
    summarise(CNT = n())
@@ -379,8 +386,7 @@ pums$DRYRFUEL <- factor(pums$DRYRFUEL,
                        levels = c(1,2,5,-2),
                        labels = c("Natural gas", "Propane", "Electricity", NA))
 
-selectInput("Income8", "Income:",
-            choices = income_group,selected = "$60,000 - $79,999")
+
 ```
 
 ```{r}
@@ -389,7 +395,7 @@ cols <- viridis(8)
 dryer_fuel <- reactive({pums %>%
    filter(DRYRFUEL %in% c("Natural gas", "Propane", "Electricity"),
          #(FINCP >= pums_min_hhincome() & FINCP <= pums_max_hhincome())
-         MONEYPY == input$Income8
+         MONEYPY == input$Income2
          ) %>%
    group_by(DRYRFUEL) %>%
    summarise(CNT = n())
@@ -400,10 +406,56 @@ renderHighchart(hchart(dryer_fuel(), "pie", hcaes(x = DRYRFUEL, y = CNT)) %>%
 hc_add_theme(hc_theme_ffx()))
 ```
 
-Technology Adoption
+Technology Adoption {data-orientation=rows}
 ======================================================================
-Column {data-width=200}
+
+Row {data-height=10}
+-----------------------------------------------------------------------
+### Income
+```{r}
+selectInput("Income3",label = NULL,
+            choices = income_group,selected = "$60,000 - $79,999")
+```
+
+Row {data-height=120}
+-----------------------------------------------------------------------
+
+### Outside lightbulbs controlled by motion detectors or light sensors
+```{r}
+#Outside light bulb motion detector
+y = pums %>%  
+  group_by(LGTOUTCNTL) %>% 
+  summarise(CNT = n())
+
+#Donut Chart
+billboarder() %>% 
+  bb_donutchart(y) %>% 
+  bb_legend(position = 'right') %>%
+  bb_data(names = list("1" = "Yes", "0" = "No", "-2" = "Not applicable"), labels = TRUE) %>%
+  #bb_title("Outside light bulbs controlled by motion detectors or light sensors") %>%
+  bb_color(palette = RColorBrewer::brewer.pal(5,"Set2"))
+```
+
+### Portion of inside light bulbs that are LED
+```{r}
+#Portion of inside light bulbs that are LED
+y = pums %>%  
+  group_by(LGTINLED) %>% 
+  summarise(CNT = n())
+
+#Donut Chart
+billboarder() %>% 
+  bb_donutchart(y) %>% 
+  bb_legend(position = 'right') %>%
+  bb_data(names = list("1" = "All", "2" = "Most", "3" = "About half", "4" = "Some", "0" = "None"), labels = TRUE) %>%
+  #bb_title("Portion of inside light bulbs that are LED") %>%
+  bb_color(palette = RColorBrewer::brewer.pal(5,"Set2"))
+
+```
+
+Row {data-height=20}
 ----------------------------------------------------------------------
+
 ### Using Solar
 ```{r}
 pums_solar<-pums %>%
@@ -411,11 +463,9 @@ pums_solar<-pums %>%
     # count creates a column called 'n'
     mutate(percent = n / sum(n) * 100)
 
-valueBox(scales::percent((100 - pums_solar$percent)/100), icon = "fa-thumbs-down",col="orange")
+valueBox(scales::percent((100 - pums_solar$percent)/100), icon = "fa-line-chart",col="orange")
 ```
 
-Column {data-width=200}
------------------------------------------------------------------------
 ### Smart Thermostat
 ```{r}
 pums_SMARTTHERM<-pums %>%
@@ -429,8 +479,6 @@ pums_SMARTTHERM_yes <- pums_SMARTTHERM %>%
 valueBox(scales::percent((pums_SMARTTHERM_yes$percent)/100), icon = "fa-line-chart",col="lightgreen")
 ```
 
-Column {data-width=200}
------------------------------------------------------------------------
 ### Electricity Smart Meter
 ```{r}
 pums_SMARTMETER<-pums %>%
@@ -443,47 +491,6 @@ pums_SMARTMETER_yes <- pums_SMARTMETER %>%
 
 valueBox(scales::percent((pums_SMARTMETER_yes$percent)/100), icon = "fa-line-chart",col = "lightblue")
 ```
-
-Column {data-width=400}
------------------------------------------------------------------------
-### {.no-padding}
-```{r}
-#Outside light bulb motion detector
-y = pums %>%  
-  group_by(LGTOUTCNTL) %>% 
-  summarise(CNT = n())
-
-#Donut Chart
-billboarder() %>% 
-  bb_donutchart(y) %>% 
-  bb_legend(position = 'right') %>%
-  bb_data(names = list("1" = "Yes", "0" = "No", "-2" = "Not applicable"), labels = TRUE) %>%
-  bb_title("Outside light bulbs controlled by motion detectors or light sensors") %>%
-  bb_color(palette = RColorBrewer::brewer.pal(5,"Set2"))
-
-
-```
-
-### {.no-padding}
-```{r}
-#Portion of inside light bulbs that are LED
-y = pums %>%  
-  group_by(LGTINLED) %>% 
-  summarise(CNT = n())
-
-#Donut Chart
-billboarder() %>% 
-  bb_donutchart(y) %>% 
-  bb_legend(position = 'right') %>%
-  bb_data(names = list("1" = "All", "2" = "Most", "3" = "About half", "4" = "Some", "0" = "None"), labels = TRUE) %>%
-  bb_title("Portion of inside light bulbs that are LED") %>%
-  bb_color(palette = RColorBrewer::brewer.pal(5,"Set2"))
-
-```
-
-
-
-
 
 Demographic Information
 ======================================================================
