@@ -325,11 +325,11 @@ main_space_fuel <- reactive({pums %>%
 ```
 
 ```{r}
-cols <- viridis(8)
+#cols <- viridis(8)
 #custom_colors <- viridis::mako(n = 15)
 renderHighchart(hchart(main_space_fuel(), "pie", hcaes(x = FUELHEAT, y = CNT)) %>%
                   hc_title(text = "Main space Heating Fuel") %>%
-                  hc_colors(cols) %>%
+                  hc_colors(RColorBrewer::brewer.pal(8,"Set1")) %>%
                   #hc_add_theme(hc_theme_ggplot2())
                   #hc_add_theme(hc_theme_google())
                   #hc_add_theme(hc_theme_bloom())
@@ -361,6 +361,7 @@ main_water_heater_fuel <- reactive({pums %>%
  
 renderHighchart(hchart(main_water_heater_fuel(), "pie", hcaes(x = FUELH2O, y = CNT)) %>%
   hc_title(text = "Fuel Used by Main Water Heater") %>%
+    hc_colors(RColorBrewer::brewer.pal(8,"Set1")) %>%
 hc_add_theme(hc_theme_ffx()))
 
 ```
@@ -388,6 +389,7 @@ stove_fuel <- reactive({pums %>%
  
 renderHighchart(hchart(stove_fuel(), "pie", hcaes(x = STOVENFUEL, y = CNT)) %>%
   hc_title(text = "Fuel used by stove") %>%
+    hc_colors(RColorBrewer::brewer.pal(8,"Set1")) %>%
 hc_add_theme(hc_theme_ffx()))
 ```
 
@@ -414,6 +416,7 @@ dryer_fuel <- reactive({pums %>%
  
 renderHighchart(hchart(dryer_fuel(), "pie", hcaes(x = DRYRFUEL, y = CNT)) %>%
   hc_title(text = " Fuel used by clothes dryer") %>%
+    hc_colors(RColorBrewer::brewer.pal(8,"Set1")) %>%
 hc_add_theme(hc_theme_ffx()))
 ```
 
@@ -422,35 +425,52 @@ Technology Adoption {data-orientation=rows}
 
 Row {data-height=30}
 -----------------------------------------------------------------------
-### Income
+### {.no-padding}
 ```{r}
-selectInput("Income3",label = NULL,
+selectInput("Income3",label = "Income:",
             choices = income_group,selected = "$60,000 - $79,999")
 ```
 
 Row {data-height=100}
 -----------------------------------------------------------------------
 
-### Outside lightbulbs controlled by motion detectors or light sensors
+### {.no-padding}
 ```{r}
+
+pums$LGTOUTCNTL <- factor(pums$LGTOUTCNTL,
+                       levels = c(1,0,-2),
+                       labels = c("Yes", "No", NA))
 #Outside light bulb motion detector
 outside_bulbs = reactive({pums %>% 
-  filter(MONEYPY == input$Income3) %>%
+  filter(LGTOUTCNTL %in% c("Yes", "No"),MONEYPY == input$Income3) %>%
   group_by(LGTOUTCNTL) %>% 
   summarise(CNT = n())
 })
 
 #Donut Chart
-renderBillboarder(billboarder() %>% 
-  bb_donutchart(outside_bulbs()) %>% 
-  bb_legend(position = 'right') %>%
-  bb_data(names = list("1" = "Yes", "0" = "No", "-2" = "Not applicable"), labels = TRUE) %>%
-  #bb_title("Outside light bulbs controlled by motion detectors or light sensors") %>%
-  bb_color(palette = RColorBrewer::brewer.pal(5,"Set2")))
+# renderBillboarder(billboarder() %>% 
+#   bb_donutchart(outside_bulbs()) %>% 
+#   bb_legend(position = 'right') %>%
+#   bb_data(names = list("1" = "Yes", "0" = "No", "-2" = "Not applicable"), labels = TRUE) %>%
+#   #bb_title("Outside light bulbs controlled by motion detectors or light sensors") %>%
+#   bb_color(palette = RColorBrewer::brewer.pal(5,"Set2")))
+
+renderHighchart(hchart(outside_bulbs(), "pie", hcaes(x = LGTOUTCNTL, y = CNT)) %>%
+  hc_title(text = "Outside light bulbs controlled by motion detectors or light sensors") %>%
+  hc_plotOptions(pie = list(innerSize="70%")) %>%
+  hc_colors(RColorBrewer::brewer.pal(5,"Dark2")) %>%
+  #hc_add_theme(hc_theme_ggplot2())
+#hc_add_theme(hc_theme_google())
+  #hc_add_theme(hc_theme_bloom())
+  hc_add_theme(hc_theme_ffx()))
 ```
 
-### Portion of inside light bulbs that are LED
+### {.no-padding}
 ```{r}
+
+pums$LGTINLED <- factor(pums$LGTINLED,
+                       levels = c(1,2,3,4,0),
+                       labels = c("All", "Most", "About half", "Some", "None"))
 #Portion of inside light bulbs that are LED
 inside_bulbs = reactive({pums %>% 
   filter(MONEYPY == input$Income3) %>%
@@ -459,12 +479,21 @@ inside_bulbs = reactive({pums %>%
 })
 
 #Donut Chart
-renderBillboarder(billboarder() %>% 
-  bb_donutchart(inside_bulbs()) %>% 
-  bb_legend(position = 'right') %>%
-  bb_data(names = list("1" = "All", "2" = "Most", "3" = "About half", "4" = "Some", "0" = "None"), labels = TRUE) %>%
-  #bb_title("Portion of inside light bulbs that are LED") %>%
-  bb_color(palette = RColorBrewer::brewer.pal(5,"Set2")))
+# renderBillboarder(billboarder() %>% 
+#   bb_donutchart(inside_bulbs()) %>% 
+#   bb_legend(position = 'right') %>%
+#   bb_data(names = list("1" = "All", "2" = "Most", "3" = "About half", "4" = "Some", "0" = "None"), labels = TRUE) %>%
+#   #bb_title("Portion of inside light bulbs that are LED") %>%
+#   bb_color(palette = RColorBrewer::brewer.pal(5,"Set2")))
+
+renderHighchart(hchart(inside_bulbs(), "pie", hcaes(x = LGTINLED, y = CNT)) %>%
+  hc_title(text = "Portion of inside light bulbs that are LED") %>%
+  hc_plotOptions(pie = list(innerSize="70%")) %>%
+  hc_colors(RColorBrewer::brewer.pal(5,"Dark2")) %>%
+  #hc_add_theme(hc_theme_ggplot2())
+#hc_add_theme(hc_theme_google())
+  #hc_add_theme(hc_theme_bloom())
+  hc_add_theme(hc_theme_ffx()))
 
 ```
 
