@@ -34,6 +34,12 @@ library(RColorBrewer)
 ```
 
 ```{r}
+# par(mar=c(3,4,2,2))
+# display.brewer.all()
+```
+
+
+```{r}
 pums <- read_csv("pums_recs_matched_v1.csv")
 
 ```
@@ -88,8 +94,9 @@ heat_equip_reactive = reactive({
 ```
 
 ```{r}
-renderHighchart(hchart(heat_equip_reactive(), type = 'column', hcaes(x = EQUIPAGE, y = CNT, group = EQUIPM)) |>
-    hc_xAxis(
+renderHighchart(
+  hchart(heat_equip_reactive(), type = 'column', hcaes(x = EQUIPAGE, y = CNT, group = EQUIPM)) |>
+   hc_xAxis(
      title = list(text = "Age of Heating Equipment")
     ) |>
    hc_yAxis(
@@ -98,7 +105,9 @@ renderHighchart(hchart(heat_equip_reactive(), type = 'column', hcaes(x = EQUIPAG
    hc_title(
     style = list(color = hex_to_rgba("black", 0.5)),
     text = "Main Space Heating Equipment Type"
-    )
+    ) |>
+   hc_colors(RColorBrewer::brewer.pal(5,"Dark2")) |>
+   hc_add_theme(hc_theme_ffx())
 )
 
 
@@ -133,10 +142,6 @@ cool_equip_reactive = reactive({pums %>%
 
 #Create highchart
 renderHighchart(hchart(cool_equip_reactive(), type = 'column', hcaes(x = AGECENAC, y = CNT, group = COOLTYPE)) |>
-   hc_chart(
-    #backgroundColor = "black"
-    backgroundColor = hex_to_rgba("lightgrey", 0.5)
-    ) |>
    hc_xAxis(
     title = list(text = "Age of Cooling Equipment")
     ) |>
@@ -146,7 +151,9 @@ renderHighchart(hchart(cool_equip_reactive(), type = 'column', hcaes(x = AGECENA
    hc_title(
     style = list(color = hex_to_rgba("black", 0.5)),
     text = "Type of Air Conditioning Equipment Used"
-    )
+    ) |>
+     hc_colors(RColorBrewer::brewer.pal(5,"Set1"))|>
+     hc_add_theme(hc_theme_ffx())
 )
 
 ```
@@ -203,12 +210,14 @@ renderHighchart(hchart(other_equip_reactive(), type = 'column', hcaes(x = Other_
    hc_title(
     style = list(color = hex_to_rgba("black", 0.5)),
     text = "Other Equipment Type"
-    )
+    )|>
+     hc_colors(RColorBrewer::brewer.pal(5,"Set1"))|>
+     hc_add_theme(hc_theme_ffx())
 )
 
 ```
 
-### Lightbulbs
+### Interior Lightbulbs
 
 ```{r}
 
@@ -234,14 +243,17 @@ lightbulbs_reactive = reactive({ pums %>%
 
 ```{r}
 
-bulbs_inside <-renderHighchart(hchart(lightbulbs_reactive(), "pie", hcaes(x = LGTINNUM, y = CNT)) %>%
+renderHighchart(hchart(lightbulbs_reactive(), "pie", hcaes(x = LGTINNUM, y = CNT)) %>%
   hc_title(text = "Bulbs Inside the Home") %>%
+  hc_plotOptions(pie = list(innerSize="70%")) %>%
+  hc_colors(RColorBrewer::brewer.pal(5,"Dark2")) %>%
   #hc_add_theme(hc_theme_ggplot2())
 #hc_add_theme(hc_theme_google())
   #hc_add_theme(hc_theme_bloom())
   hc_add_theme(hc_theme_ffx()))
 ```
  
+### Exterior Lightbulbs
 
 ```{r}
 
@@ -265,17 +277,16 @@ lightbulbs_reactive_outside = reactive({ pums %>%
 
 ```{r}
 
-bulbs_outside <-renderHighchart(hchart(lightbulbs_reactive_outside(), "pie", hcaes(x = LGTOUTNUM, y = CNT)) %>%
+renderHighchart(hchart(lightbulbs_reactive_outside(), "pie", hcaes(x = LGTOUTNUM, y = CNT)) %>%
   hc_title(text = "Bulbs Outside the Home") %>%
+  hc_plotOptions(pie = list(innerSize="70%")) %>%
+  hc_colors(RColorBrewer::brewer.pal(5,"Dark2")) %>%
   #hc_add_theme(hc_theme_ggplot2())
 #hc_add_theme(hc_theme_google())
   #hc_add_theme(hc_theme_bloom())
   hc_add_theme(hc_theme_ffx()))
 ```
-
-```{r}
-splitLayout(cellWidths = c("50%"), bulbs_inside, bulbs_outside)
-``` 
+ 
 
 
 Energy Consumption Baseline
@@ -409,7 +420,7 @@ hc_add_theme(hc_theme_ffx()))
 Technology Adoption {data-orientation=rows}
 ======================================================================
 
-Row {data-height=10}
+Row {data-height=30}
 -----------------------------------------------------------------------
 ### Income
 ```{r}
@@ -417,43 +428,47 @@ selectInput("Income3",label = NULL,
             choices = income_group,selected = "$60,000 - $79,999")
 ```
 
-Row {data-height=120}
+Row {data-height=100}
 -----------------------------------------------------------------------
 
 ### Outside lightbulbs controlled by motion detectors or light sensors
 ```{r}
 #Outside light bulb motion detector
-y = pums %>%  
+outside_bulbs = reactive({pums %>% 
+  filter(MONEYPY == input$Income3) %>%
   group_by(LGTOUTCNTL) %>% 
   summarise(CNT = n())
+})
 
 #Donut Chart
-billboarder() %>% 
-  bb_donutchart(y) %>% 
+renderBillboarder(billboarder() %>% 
+  bb_donutchart(outside_bulbs()) %>% 
   bb_legend(position = 'right') %>%
   bb_data(names = list("1" = "Yes", "0" = "No", "-2" = "Not applicable"), labels = TRUE) %>%
   #bb_title("Outside light bulbs controlled by motion detectors or light sensors") %>%
-  bb_color(palette = RColorBrewer::brewer.pal(5,"Set2"))
+  bb_color(palette = RColorBrewer::brewer.pal(5,"Set2")))
 ```
 
 ### Portion of inside light bulbs that are LED
 ```{r}
 #Portion of inside light bulbs that are LED
-y = pums %>%  
+inside_bulbs = reactive({pums %>% 
+  filter(MONEYPY == input$Income3) %>%
   group_by(LGTINLED) %>% 
   summarise(CNT = n())
+})
 
 #Donut Chart
-billboarder() %>% 
-  bb_donutchart(y) %>% 
+renderBillboarder(billboarder() %>% 
+  bb_donutchart(inside_bulbs()) %>% 
   bb_legend(position = 'right') %>%
   bb_data(names = list("1" = "All", "2" = "Most", "3" = "About half", "4" = "Some", "0" = "None"), labels = TRUE) %>%
   #bb_title("Portion of inside light bulbs that are LED") %>%
-  bb_color(palette = RColorBrewer::brewer.pal(5,"Set2"))
+  bb_color(palette = RColorBrewer::brewer.pal(5,"Set2")))
 
 ```
 
-Row {data-height=20}
+Row {data-height=10}
 ----------------------------------------------------------------------
 
 ### Using Solar
