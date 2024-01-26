@@ -33,17 +33,13 @@ library(shiny)
 library(RColorBrewer)
 ```
 
-```{r}
-# par(mar=c(3,4,2,2))
-# display.brewer.all()
-```
 
 
 ```{r}
 pums <- read_csv("pums_recs_matched_v1.csv")
 
 ```
-Building Characteristics
+Building Characteristics {data-icon="fa-building"}
 ======================================================================
 
 Column {.tabset .tabset-fade data-width=500}
@@ -53,13 +49,22 @@ Column {.tabset .tabset-fade data-width=500}
 pums$MONEYPY <- factor(pums$MONEYPY,
                         levels = c(1,2,3,4,5,6,7,8),
                         labels = c("< $20,000", "$20,000 - $39,999", "$40,000 - $59,999", "$60,000 - $79,999", "$80,000 - $99,999", "$100,000 - $119,999", "$120,000 - $139,999", ">= $140,000"))
+```
 
+
+```{r}
 income_group <- pums %>%
   .$MONEYPY %>%
   unique %>%
   sort
-#income_group
 
+#class(income_group)
+#levels(income_group)
+#levels(income_group) <- c(levels(income_group), 'All')
+#levels(income_group)
+
+#table(income_group)
+#income_group
 selectInput("Income1", "Income:",
             choices = income_group,selected = "$60,000 - $79,999")
 ```
@@ -77,9 +82,6 @@ pums$EQUIPAGE<- factor(pums$EQUIPAGE,
                  labels = c("Less than 2 years old", "2 to 4 years old", "5 to 9 years old", "10 to 14 years old", "15 to 19 years old", "20 years or older", NA))
 
 
-#table(pums$AGECENAC)
-#table(pums$COOLTYPE)
-
 heat_equip_reactive = reactive({
   pums %>%
     filter(EQUIPM %in% c("Steam/hot water system with radiators or pipes", "Central furnace", "Heat pump"),
@@ -88,9 +90,6 @@ heat_equip_reactive = reactive({
   group_by(EQUIPAGE, EQUIPM) %>%
   summarise(CNT = n())})
 
-#View(y)
-
-#renderPrint(y_reactive())
 ```
 
 ```{r}
@@ -100,14 +99,18 @@ renderHighchart(
      title = list(text = "Age of Heating Equipment")
     ) |>
    hc_yAxis(
-    title = list(text = " ")
+    title = list(text = "Number of Heating Equipment")
     ) |>
    hc_title(
-    style = list(color = hex_to_rgba("black", 0.5)),
-    text = "Main Space Heating Equipment Type"
+    style = list(color = hex_to_rgba("black", 0.5), fontSize = "20px", fontWeight = "bold"),
+    text = "Main Space Heating Equipment Type",
+    align = "center"
     ) |>
    hc_colors(RColorBrewer::brewer.pal(5,"Dark2")) |>
-   hc_add_theme(hc_theme_ffx())
+   hc_add_theme(hc_theme_ffx()) %>%
+    hc_caption(
+    text = "Click on the different heating equipment type on the legend to turn on or off."
+    )
 )
 
 
@@ -126,8 +129,7 @@ pums$AGECENAC<- factor(pums$AGECENAC,
                  labels = c("Less than 2 years old", "2 to 4 years old", "5 to 9 years old", "10 to 14 years old", "15 to 19 years old", "20 years or older", NA))
 
 
-#table(pums$AGECENAC)
-#table(pums$COOLTYPE)
+
 cool_equip_reactive = reactive({pums %>%
   filter(COOLTYPE %in% c("Central air conditioning system", "Individual window wall or portable units", "Both a central system and individual units"), AGECENAC %in% c("Less than 2 years old", "2 to 4 years old", "5 to 9 years old", "10 to 14 years old", "15 to 19 years old", "20 years or older"),
          #(FINCP >= pums_min_income() & FINCP <= pums_max_income())
@@ -146,14 +148,19 @@ renderHighchart(hchart(cool_equip_reactive(), type = 'column', hcaes(x = AGECENA
     title = list(text = "Age of Cooling Equipment")
     ) |>
    hc_yAxis(
-    title = list(text = " ")
+    title = list(text = "Number of Cooling Equipment")
     ) |>
    hc_title(
-    style = list(color = hex_to_rgba("black", 0.5)),
-    text = "Type of Air Conditioning Equipment Used"
+    style = list(color = hex_to_rgba("black", 0.5), 
+                 fontSize = "20px", fontWeight = "bold"),
+    text = "Type of Air Conditioning Equipment Used",
+    align = "center"
     ) |>
      hc_colors(RColorBrewer::brewer.pal(5,"Set1"))|>
-     hc_add_theme(hc_theme_ffx())
+     hc_add_theme(hc_theme_ffx()) %>%
+     hc_caption(
+    text = "Click on the different cooling equipment type on the legend to turn on or off."
+    )
 )
 
 ```
@@ -205,14 +212,18 @@ renderHighchart(hchart(other_equip_reactive(), type = 'column', hcaes(x = Other_
     title = list(text = "Age of Other Equipment")
     ) |>
    hc_yAxis(
-    title = list(text = " ")
+    title = list(text = "Number of Equipment")
     ) |>
    hc_title(
-    style = list(color = hex_to_rgba("black", 0.5)),
-    text = "Other Equipment Type"
+    style = list(color = hex_to_rgba("black", 0.5), fontSize = "20px", fontWeight = "bold"),
+    text = "Other Equipment Type",
+    align = "center"
     )|>
      hc_colors(RColorBrewer::brewer.pal(5,"Set1"))|>
-     hc_add_theme(hc_theme_ffx())
+     hc_add_theme(hc_theme_ffx()) %>%
+      hc_caption(
+    text = "Click on the different other equipment types on the legend to turn on or off."
+    ) 
 )
 
 ```
@@ -244,8 +255,14 @@ lightbulbs_reactive = reactive({ pums %>%
 ```{r}
 
 renderHighchart(hchart(lightbulbs_reactive(), "pie", hcaes(x = LGTINNUM, y = CNT)) %>%
-  hc_title(text = "Bulbs Inside the Home") %>%
-  hc_plotOptions(pie = list(innerSize="70%")) %>%
+  hc_title(text = "Bulbs Inside the Home",
+           style = list(color = hex_to_rgba("black", 0.5), 
+                        fontSize = "20px", fontWeight = "bold"),
+           align = "center") %>%
+  hc_plotOptions(pie = list(innerSize="70%"),
+                 series = list(
+  dataLabels =  list(format = "<b>{point.name}</b>: {point.percentage:.1f} %")
+        )) %>%
   hc_colors(RColorBrewer::brewer.pal(5,"Dark2")) %>%
   #hc_add_theme(hc_theme_ggplot2())
 #hc_add_theme(hc_theme_google())
@@ -278,8 +295,14 @@ lightbulbs_reactive_outside = reactive({ pums %>%
 ```{r}
 
 renderHighchart(hchart(lightbulbs_reactive_outside(), "pie", hcaes(x = LGTOUTNUM, y = CNT)) %>%
-  hc_title(text = "Bulbs Outside the Home") %>%
-  hc_plotOptions(pie = list(innerSize="70%")) %>%
+  hc_title(text = "Bulbs Outside the Home",
+           style = list(color = hex_to_rgba("black", 0.5),
+                        fontSize = "20px", fontWeight = "bold"),
+           align = "center") %>%
+  hc_plotOptions(pie = list(innerSize="70%"),
+                 series = list(
+  dataLabels =  list(format = "<b>{point.name}</b>: {point.percentage:.1f} %")
+        )) %>%
   hc_colors(RColorBrewer::brewer.pal(5,"Dark2")) %>%
   #hc_add_theme(hc_theme_ggplot2())
 #hc_add_theme(hc_theme_google())
@@ -289,7 +312,7 @@ renderHighchart(hchart(lightbulbs_reactive_outside(), "pie", hcaes(x = LGTOUTNUM
  
 
 
-Energy Consumption Baseline
+Energy Consumption Baseline {data-icon="fa-sun"}
 ======================================================================
 
 Column {.tabset .tabset-fade}
@@ -328,13 +351,20 @@ main_space_fuel <- reactive({pums %>%
 #cols <- viridis(8)
 #custom_colors <- viridis::mako(n = 15)
 renderHighchart(hchart(main_space_fuel(), "pie", hcaes(x = FUELHEAT, y = CNT)) %>%
-                  hc_title(text = "Main space Heating Fuel") %>%
+                  hc_title(text = "Main space Heating Fuel",
+                           style = list(color = hex_to_rgba("black", 0.5), fontSize = "25px", fontWeight = "bold"),
+                           align = "center") %>%
+                  hc_plotOptions(series = list(dataLabels =  list(format = "<b>{point.name}</b>: {point.percentage:.1f} %")
+        )) %>% 
                   hc_colors(RColorBrewer::brewer.pal(8,"Set1")) %>%
                   #hc_add_theme(hc_theme_ggplot2())
                   #hc_add_theme(hc_theme_google())
                   #hc_add_theme(hc_theme_bloom())
-                  hc_add_theme(hc_theme_ffx()))
+                  hc_add_theme(hc_theme_ffx())) 
+ 
 ```
+
+
 
 ### Main Water Heater
 ```{r}
@@ -360,7 +390,11 @@ main_water_heater_fuel <- reactive({pums %>%
 #table(y)
  
 renderHighchart(hchart(main_water_heater_fuel(), "pie", hcaes(x = FUELH2O, y = CNT)) %>%
-  hc_title(text = "Fuel Used by Main Water Heater") %>%
+  hc_title(text = "Fuel Used by Main Water Heater",
+           style = list(color = hex_to_rgba("black", 0.5), fontSize = "25px", fontWeight = "bold"),
+           align = "center") %>%
+    hc_plotOptions(series = list(dataLabels =  list(format = "<b>{point.name}</b>: {point.percentage:.1f} %")
+        )) %>% 
     hc_colors(RColorBrewer::brewer.pal(8,"Set1")) %>%
 hc_add_theme(hc_theme_ffx()))
 
@@ -388,7 +422,11 @@ stove_fuel <- reactive({pums %>%
 })
  
 renderHighchart(hchart(stove_fuel(), "pie", hcaes(x = STOVENFUEL, y = CNT)) %>%
-  hc_title(text = "Fuel used by stove") %>%
+  hc_title(text = "Fuel used by stove",
+           style = list(color = hex_to_rgba("black", 0.5), fontSize = "25px", fontWeight = "bold"),
+           align = "center") %>%
+    hc_plotOptions(series = list(dataLabels =  list(format = "<b>{point.name}</b>: {point.percentage:.1f} %")
+        )) %>% 
     hc_colors(RColorBrewer::brewer.pal(8,"Set1")) %>%
 hc_add_theme(hc_theme_ffx()))
 ```
@@ -415,20 +453,67 @@ dryer_fuel <- reactive({pums %>%
 })
  
 renderHighchart(hchart(dryer_fuel(), "pie", hcaes(x = DRYRFUEL, y = CNT)) %>%
-  hc_title(text = " Fuel used by clothes dryer") %>%
+  hc_title(text = " Fuel used by clothes dryer",
+           style = list(color = hex_to_rgba("black", 0.5), fontSize = "25px", fontWeight = "bold"),
+           align = "center") %>%
+    hc_plotOptions(series = list(dataLabels =  list(format = "<b>{point.name}</b>: {point.percentage:.1f} %")
+        )) %>% 
     hc_colors(RColorBrewer::brewer.pal(8,"Set1")) %>%
 hc_add_theme(hc_theme_ffx()))
 ```
 
-Technology Adoption {data-orientation=rows}
+Technology Adoption {data-orientation=rows data-icon="fa-solar-panel"}
 ======================================================================
 
-Row {data-height=30}
+Row {data-height=20}
 -----------------------------------------------------------------------
 ### {.no-padding}
 ```{r}
 selectInput("Income3",label = "Income:",
             choices = income_group,selected = "$60,000 - $79,999")
+```
+
+Row {data-height=10}
+----------------------------------------------------------------------
+
+### Using Solar
+```{r}
+pums_solar<-pums %>%
+    count(USESOLAR) %>%
+    # count creates a column called 'n'
+    mutate(percent = n / sum(n) * 100)
+
+#View(pums_solar)
+
+
+valueBox(scales::percent((100 - pums_solar$percent)/100), icon = "fa-line-chart",col="orange")
+```
+
+### Smart Thermostat
+```{r}
+pums_SMARTTHERM<-pums %>%
+    count(SMARTTHERM) %>%
+    # count creates a column called 'n'
+    mutate(percent = n / sum(n) * 100)
+
+#View(pums_SMARTTHERM)
+pums_SMARTTHERM_yes <- pums_SMARTTHERM %>%
+  filter(SMARTTHERM == 1)
+
+valueBox(scales::percent((pums_SMARTTHERM_yes$percent)/100), icon = "fa-line-chart",col="lightgreen")
+```
+
+### Electricity Smart Meter
+```{r}
+pums_SMARTMETER<-pums %>%
+    count(SMARTMETER) %>%
+    # count creates a column called 'n'
+    mutate(percent = n / sum(n) * 100)
+
+pums_SMARTMETER_yes <- pums_SMARTMETER %>%
+  filter(SMARTMETER == 1)
+
+valueBox(scales::percent((pums_SMARTMETER_yes$percent)/100), icon = "fa-line-chart",col = "lightblue")
 ```
 
 Row {data-height=100}
@@ -440,6 +525,7 @@ Row {data-height=100}
 pums$LGTOUTCNTL <- factor(pums$LGTOUTCNTL,
                        levels = c(1,0,-2),
                        labels = c("Yes", "No", NA))
+
 #Outside light bulb motion detector
 outside_bulbs = reactive({pums %>% 
   filter(LGTOUTCNTL %in% c("Yes", "No"),MONEYPY == input$Income3) %>%
@@ -448,17 +534,15 @@ outside_bulbs = reactive({pums %>%
 })
 
 #Donut Chart
-# renderBillboarder(billboarder() %>% 
-#   bb_donutchart(outside_bulbs()) %>% 
-#   bb_legend(position = 'right') %>%
-#   bb_data(names = list("1" = "Yes", "0" = "No", "-2" = "Not applicable"), labels = TRUE) %>%
-#   #bb_title("Outside light bulbs controlled by motion detectors or light sensors") %>%
-#   bb_color(palette = RColorBrewer::brewer.pal(5,"Set2")))
-
 renderHighchart(hchart(outside_bulbs(), "pie", hcaes(x = LGTOUTCNTL, y = CNT)) %>%
-  hc_title(text = "Outside light bulbs controlled by motion detectors or light sensors") %>%
-  hc_plotOptions(pie = list(innerSize="70%")) %>%
-  hc_colors(RColorBrewer::brewer.pal(5,"Dark2")) %>%
+  hc_title(text = "Outside light bulbs controlled by motion detectors or light sensors", 
+           style = list(color = hex_to_rgba("black", 0.5), fontSize = "20px", fontWeight = "bold"),
+           align = "center") %>%
+  hc_plotOptions(pie = list(innerSize="70%"),
+                 series = list(
+  dataLabels =  list(format = "<b>{point.name}</b>: {point.percentage:.1f} %")
+        )) %>%
+  hc_colors(RColorBrewer::brewer.pal(5,"Set1")) %>%
   #hc_add_theme(hc_theme_ggplot2())
 #hc_add_theme(hc_theme_google())
   #hc_add_theme(hc_theme_bloom())
@@ -479,64 +563,22 @@ inside_bulbs = reactive({pums %>%
 })
 
 #Donut Chart
-# renderBillboarder(billboarder() %>% 
-#   bb_donutchart(inside_bulbs()) %>% 
-#   bb_legend(position = 'right') %>%
-#   bb_data(names = list("1" = "All", "2" = "Most", "3" = "About half", "4" = "Some", "0" = "None"), labels = TRUE) %>%
-#   #bb_title("Portion of inside light bulbs that are LED") %>%
-#   bb_color(palette = RColorBrewer::brewer.pal(5,"Set2")))
-
 renderHighchart(hchart(inside_bulbs(), "pie", hcaes(x = LGTINLED, y = CNT)) %>%
-  hc_title(text = "Portion of inside light bulbs that are LED") %>%
-  hc_plotOptions(pie = list(innerSize="70%")) %>%
+  hc_title(text = "Portion of inside light bulbs that are LED", 
+           style = list(color = hex_to_rgba("black", 0.5), fontSize = "20px", fontWeight = "bold"),
+           align = "center") %>%
+  hc_plotOptions(pie = list(innerSize="70%"),
+                 series = list(
+  dataLabels =  list(format = "<b>{point.name}</b>: {point.percentage:.1f} %")
+        )) %>%
   hc_colors(RColorBrewer::brewer.pal(5,"Dark2")) %>%
-  #hc_add_theme(hc_theme_ggplot2())
-#hc_add_theme(hc_theme_google())
-  #hc_add_theme(hc_theme_bloom())
   hc_add_theme(hc_theme_ffx()))
 
 ```
 
-Row {data-height=10}
-----------------------------------------------------------------------
 
-### Using Solar
-```{r}
-pums_solar<-pums %>%
-    count(USESOLAR) %>%
-    # count creates a column called 'n'
-    mutate(percent = n / sum(n) * 100)
 
-valueBox(scales::percent((100 - pums_solar$percent)/100), icon = "fa-line-chart",col="orange")
-```
-
-### Smart Thermostat
-```{r}
-pums_SMARTTHERM<-pums %>%
-    count(SMARTTHERM) %>%
-    # count creates a column called 'n'
-    mutate(percent = n / sum(n) * 100)
-
-pums_SMARTTHERM_yes <- pums_SMARTTHERM %>%
-  filter(SMARTTHERM == 1)
-
-valueBox(scales::percent((pums_SMARTTHERM_yes$percent)/100), icon = "fa-line-chart",col="lightgreen")
-```
-
-### Electricity Smart Meter
-```{r}
-pums_SMARTMETER<-pums %>%
-    count(SMARTMETER) %>%
-    # count creates a column called 'n'
-    mutate(percent = n / sum(n) * 100)
-
-pums_SMARTMETER_yes <- pums_SMARTMETER %>%
-  filter(SMARTMETER == 1)
-
-valueBox(scales::percent((pums_SMARTMETER_yes$percent)/100), icon = "fa-line-chart",col = "lightblue")
-```
-
-Demographic Information
+Demographic Information {data-icon="fa-people-roof"}
 ======================================================================
 
 Column {.tabset .tabset-fade data-width=650}
@@ -545,8 +587,6 @@ Column {.tabset .tabset-fade data-width=650}
 ### Income
 
 ```{r}
-
-
 pums$HOUSEHOLDER_RACE <- factor(pums$HOUSEHOLDER_RACE,
                                 levels = c(1,2,3,4,5,6,7),
                                 labels = c("White", "Black or African/American", "American Indian or Alaska Native", "Asian", "Native Hawaiian or Other Pacific Islander", "Some Other Race", "2 or More Races"))
@@ -555,20 +595,24 @@ y = pums %>%
   filter(HOUSEHOLDER_RACE %in% c("White", "Black or African/American","Asian", "2 or More Races"), MONEYPY %in% c("< $20,000", "$20,000 - $39,999", "$40,000 - $59,999", "$60,000 - $79,999", "$80,000 - $99,999", "$100,000 - $119,999", "$120,000 - $139,999", ">= $140,000")) %>%
   group_by(MONEYPY, HOUSEHOLDER_RACE) %>%
   summarise(CNT = n())
-
-#table(y)
-
+  
 #Create highchart
 hchart(y, type = 'column', hcaes(x = MONEYPY, y = CNT, group = HOUSEHOLDER_RACE)) |>
    hc_xAxis(
     title = list(text = "Income")
     ) |>
    hc_yAxis(
-    title = list(text = " ")
+    title = list(text = "Number of Households")
     ) |>
    hc_title(
     style = list(color = hex_to_rgba("black", 0.5), fontSize = "25px", fontWeight = "bold"),
-    text = "Annual Gross Household Income by Race"
+    text = "Annual Gross Household Income by Race",
+    align = "center"
+    ) |>
+  hc_colors(RColorBrewer::brewer.pal(5,"Dark2")) %>%
+  hc_add_theme(hc_theme_ffx()) %>%
+   hc_caption(
+    text = "Click on the different races in the legend to turn on or off."
     )
 
 ```
@@ -588,8 +632,14 @@ hchart(
   hc_add_theme(hc_theme_google()) %>%
   hc_tooltip(pointFormat = "<b>Age: </b> {point.y} <b>")%>%
   hc_title(text = "Distribution of Respondent's Age", 
-           style = list(color = hex_to_rgba("black", 0.5),fontSize = "25px", fontWeight = "bold")) %>%
-  hc_credits(enabled = TRUE)
+           style = list(color = hex_to_rgba("black", 0.5),fontSize = "25px", fontWeight = "bold"),
+           align = "center") %>%
+  hc_xAxis(title = list(text = "Age")) %>%
+  hc_yAxis(title = list(text = "Number of Respondents")) %>%
+  hc_credits(enabled = TRUE) %>%
+  hc_add_theme(hc_theme_ffx()) %>%
+  hc_caption(text = "A portion of the histogram may be highlighted and selected to zoom in.")
+
 
 ```
 Column {data-width=350}
@@ -599,22 +649,24 @@ Column {data-width=350}
 
 ```{r}
 cols <- viridis(8)
-#cols <- substr(cols, 0, 10)
- y = pums %>%
+y = pums %>%
    filter(MONEYPY %in% c("< $20,000", "$20,000 - $39,999", "$40,000 - $59,999", "$60,000 - $79,999", "$80,000 - $99,999", "$100,000 - $119,999", "$120,000 - $139,999", ">= $140,000")) %>%
    group_by(MONEYPY) %>%
    summarise(CNT = n())
 
 hchart(y, "pie", hcaes(x = MONEYPY, y = CNT)) %>%
    hc_title(text = "Annual Gross Household Income for the Last Year",
-            style = list(fontSize = "14px", fontWeight = "bold")) %>%
+            style = list(fontSize = "18px", fontWeight = "bold"),
+            align = "center") %>%
   hc_add_theme(hc_theme_ffx()) %>%
-  hc_colors(cols)
+  hc_plotOptions(series = list(dataLabels =  list(format = "<b>{point.name}</b>: {point.percentage:.1f} %")
+        )) %>% 
+  hc_colors(RColorBrewer::brewer.pal(8,"Spectral"))
 ```
 
 ### {.no-padding}
 ```{r}
-cols <- viridis(4)
+#cols <- viridis(4)
 
 y = pums %>%
   filter(HOUSEHOLDER_RACE %in% c("White", "Black or African/American","Asian", "2 or More Races")) %>%
@@ -623,9 +675,12 @@ y = pums %>%
 
 hchart(y, "pie", hcaes(x = HOUSEHOLDER_RACE, y = CNT)) %>%
    hc_title(text = "Householder Race",
-            style = list(fontSize = "14px", fontWeight = "bold")) %>%
+            style = list(fontSize = "18px", fontWeight = "bold"),
+            align = "center") %>%
   hc_add_theme(hc_theme_ffx()) %>%
-  hc_colors(cols)
+  hc_plotOptions(series = list(dataLabels =  list(format = "<b>{point.name}</b>: {point.percentage:.1f} %")
+        )) %>% 
+  hc_colors(RColorBrewer::brewer.pal(5,"Set1"))
 
 ```
 
